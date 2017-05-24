@@ -6,8 +6,8 @@
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-size_t N = 0;
-double dt = 0;
+size_t N = 25;
+double dt = 0.05;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -20,6 +20,7 @@ double dt = 0;
 //
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
+const double v_tgt = 35; // set target speed to 35
 
 class FG_eval {
  public:
@@ -52,7 +53,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // element vector and there are 10 timesteps. The number of variables is:
   //
   // 4 * 10 + 2 * 9
-  size_t n_vars = 0;
+  size_t n_vars = 4*25 + 2*(25-1);
   // TODO: Set the number of constraints
   size_t n_constraints = 0;
 
