@@ -92,9 +92,7 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
-          // Initialize state vector
-          Eigen::VectorXd state(4); // {x, y, psi, v}
-          state = {px, py, psi, v};
+          
 
           /*
            * Convert waypoints from map coordinate system
@@ -126,6 +124,20 @@ int main() {
            */
           
           Eigen::VectorXd coeffs = polyfit(X_w_raw, Y_w_raw, int(3));
+          
+          // cross track error is distance in y, from the vehicle coordinate systems's perspective
+          double cte = polyeval(coeffs, 0.0);
+          
+          // double epsi is the difference between desired heading and actual
+          // this is equivalent to the angle of the tangent line of the polynomial at x = 0
+          // or tan-1((df/dx)(0))
+          //
+          // a + bx + cx^2 + dx^3 -> b , when taking the derivative evaluated at 0
+          double epsi = atan2(coeffs[1], 1.0); // (rise, run)
+                   
+          // Initialize state vector
+          Eigen::VectorXd state(6); // {x, y, psi, v, cte, epsi}
+          state << px, py, psi, v, cte, epsi;
           vector<double> output = mpc.Solve(state, coeffs); // {angle, acceleration}
           
           /*

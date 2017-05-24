@@ -48,14 +48,16 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   size_t i;
   typedef CPPAD_TESTVECTOR(double) Dvector;
 
-  // TODO: Set the number of model variables (includes both states and inputs).
+  // Set the number of model variables (includes both states and inputs).
   // For example: If the state is a 4 element vector, the actuators is a 2
   // element vector and there are 10 timesteps. The number of variables is:
   //
   // 4 * 10 + 2 * 9
-  size_t n_vars = 4*25 + 2*(25-1);
-  // TODO: Set the number of constraints
-  size_t n_constraints = 0;
+  // state = {x, y, psi, v, cte, eps}
+  size_t n_vars = 6*N + 6*(N-1);
+  // Set the number of constraints
+  // state dimension * number of steps
+  size_t n_constraints = 6*N;
 
   // Initial value of the independent variables.
   // SHOULD BE 0 besides initial state.
