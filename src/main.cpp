@@ -108,14 +108,14 @@ int main() {
             double x_pc; // x-coordinate of waypoint in car coordinate system
             double y_pc; // y-coordinate of waypoint in car coordinate system
             
-            x_pc = (ptsx[i] - px)*cos(psi) + (ptsy[i] - py)*sin(psi);
-            y_pc = (ptsy[i] - py)*cos(psi) - (ptsx[i] - px)*sin(psi);
+            X_w_raw[i] = (ptsx[i] - px)*cos(psi) + (ptsy[i] - py)*sin(psi);
+            Y_w_raw[i] = (ptsy[i] - py)*cos(psi) - (ptsx[i] - px)*sin(psi);
             
-            // only look at points "ahead"
+            /* // only look at points "ahead"
             if (x_pc > 0.0) {
               X_w_raw[i] = x_pc;
               Y_w_raw[i] = y_pc;
-            }
+            }*/
           }
           
           /*
@@ -128,16 +128,18 @@ int main() {
           // cross track error is distance in y, from the vehicle coordinate systems's perspective
           double cte = polyeval(coeffs, 0.0);
           
-          // double epsi is the difference between desired heading and actual
+          // epsi is the difference between desired heading and actual
           // this is equivalent to the angle of the tangent line of the polynomial at x = 0
           // or tan-1((df/dx)(0))
           //
-          // a + bx + cx^2 + dx^3 -> b , when taking the derivative evaluated at 0
-          double epsi = atan2(coeffs[1], 1.0); // (rise, run)
+          // a + bx + cx^2 + dx^3 -> b , when taking the derivative evaluated at x=0
+          double epsi = atan(coeffs[1]); // (rise, run)
                    
           // Initialize state vector
           Eigen::VectorXd state(6); // {x, y, psi, v, cte, epsi}
+          // x0 = 0.0 and y0 = 0.0 because we are in the vehicle coordinate system
           state << px, py, psi, v, cte, epsi;
+          state << 0.0, 0.0, 0.0, v, cte, epsi;
           vector<double> output = mpc.Solve(state, coeffs); // {angle, acceleration}
           
           /*
@@ -153,8 +155,8 @@ int main() {
           
           // steer_value = output[0]
           // throttle_value = output[1]
-          double steer_value = -0.05;
-          double throttle_value = 0.15;
+          double steer_value = 0.0;//output[0];//-0.05;
+          double throttle_value = 0.05;//output[1];//0.15;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
@@ -164,12 +166,12 @@ int main() {
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
           
-          /*
-           * Dummy for test
-           * Populate with real values
-           */
-          mpc_x_vals = {2,4,6,8};
-          mpc_y_vals = {0,0,0,0};
+          for (int i = 0; i < 10; ++i ) {
+            mpc_x_vals.push_back(output[i]);
+            mpc_y_vals.push_back(output[10 + i]);
+            //std::cout << "x[" << i << "] = " << output[i] << std::endl;
+            //std::cout << "y[" << i << "] = " << output[10 + i] << std::endl;
+          }
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -181,16 +183,16 @@ int main() {
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
-          double v_min = 5 > v ? 5 : v;
+          //double v_min = 5 > v ? 5 : v;
           /*
            * Visualize waypoints based on vehicle speed
            */
-          int N_pts = 8;
-          for (int i = 0; i < N_pts; ++i ) {
-            double x_eval = double(i+1)*v_min;
-            double y_eval = polyeval(coeffs, x_eval);
-            next_x_vals.push_back(x_eval);
-            next_y_vals.push_back(y_eval);
+          //int N_pts = 8;
+          for (int i = 0; i < N_way; ++i ) {
+            //double x_eval = double(i+1)*v_min;
+            //double y_eval = polyeval(coeffs, x_eval);
+            next_x_vals.push_back(X_w_raw[i]);
+            next_y_vals.push_back(Y_w_raw[i]);
           }
           
           
@@ -212,7 +214,7 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          this_thread::sleep_for(chrono::milliseconds(100));
+          this_thread::sleep_for(chrono::milliseconds(0));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
