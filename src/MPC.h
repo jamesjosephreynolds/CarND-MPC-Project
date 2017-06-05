@@ -10,8 +10,14 @@ using namespace std;
 class MPC {
  public:
   
+ /* 
+  MPC project hyperparameters
+  */
+ // Number of future points to model, and time step
   const size_t N = 8;
   const double dt = 0.10;
+ 
+ // Weight factors for cost optimization
   struct MPC_Weights {
     const double w_cte = 100;
     const double w_epsi = 100;
