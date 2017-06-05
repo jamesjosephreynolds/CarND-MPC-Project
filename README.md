@@ -78,10 +78,14 @@ Most of my actual model tuning was in the weighting factors.  You can see that `
 
 ## Results
 
-I was able to achieve a very pleasing result, with top speed over 80 MPH, and smooth handling.  The control is stable, and the top speed of 80 MPH is more than 2.5 times higher than I achieved with PID control.
+I was able to achieve a very pleasing result, with top speed over 80 MPH, and smooth handling.  The control is stable, and the top speed of 80 MPH is more than 2.5 times higher than I achieved with PID control.  I have recorded a [video](https://youtu.be/1fFbWDCZlmE) showing my best results, after an hour or two of tuning.
 
 [![Whoops, there should be a picture here!](https://img.youtube.com/vi/1fFbWDCZlmE/0.jpg)](https://youtu.be/1fFbWDCZlmE)
 
-https://youtu.be/1fFbWDCZlmE
-
 ## Reflections
+
+For me, this was the most rewarding project thus far, in the nanodegree program.  While controlling the vehicle using deep learning and convolutional neural networks is very interesting, I don't believe such a strategy can be used on its down.  This approach, of planning controls to achieve waypoints, is robust to "never-before-seen" terrain, buildings, etc.
+
+Moreover, the high level of speed and stable control confirms my feelings that PID control is wholly inadequate due to its being reactive, not proactive.
+
+It would be very interesting to combine this method with a safety controller, whose job it is to avoid unmapped objects (other vehicles, animals, pedestrians, etc.)
