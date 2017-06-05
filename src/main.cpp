@@ -70,6 +70,7 @@ int main() {
 
   // MPC is initialized here!
   MPC mpc;
+  
 
   h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
@@ -92,7 +93,9 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
-          
+          size_t N = 15;
+          double dt = 0.05;
+          mpc.Init(N, dt);
 
           /*
            * Convert waypoints from map coordinate system
@@ -138,8 +141,11 @@ int main() {
           // Initialize state vector
           Eigen::VectorXd state(6); // {x, y, psi, v, cte, epsi}
           // x0 = 0.0 and y0 = 0.0 because we are in the vehicle coordinate system
-          state << px, py, psi, v, cte, epsi;
-          state << 0.0, 0.0, 0.0, v, cte, epsi;
+          
+          px = v*dt;
+          
+          state << px, 0.0, 0.0, v, cte, epsi;
+          //state << 0.0, 0.0, 0.0, v, cte, epsi;
           vector<double> output = mpc.Solve(state, coeffs); // {angle, acceleration}
           
           /*
@@ -155,20 +161,23 @@ int main() {
           
           // steer_value = output[0]
           // throttle_value = output[1]
-          double steer_value = 0.0;//output[0];//-0.05;
-          double throttle_value = 0.05;//output[1];//0.15;
+          double steer_value = output[0];//-0.05;
+          double throttle_value = output[1];//0.15;
 
           json msgJson;
-          msgJson["steering_angle"] = steer_value;
+          msgJson["steering_angle"] = -steer_value;
           msgJson["throttle"] = throttle_value;
+          
+          std::cout << "steering angle: " << steer_value << std::endl;
+          std::cout << "throttle: " << throttle_value << std::endl;
 
-          //Display the MPC predicted trajectory 
+          //Display the MPC predicted trajectory
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
           
-          for (int i = 0; i < 10; ++i ) {
-            mpc_x_vals.push_back(output[i]);
-            mpc_y_vals.push_back(output[10 + i]);
+          for (int i = 0; i < N; ++i ) {
+            mpc_x_vals.push_back(output[2*i + 2]);
+            mpc_y_vals.push_back(output[2*i + 3]);
             //std::cout << "x[" << i << "] = " << output[i] << std::endl;
             //std::cout << "y[" << i << "] = " << output[10 + i] << std::endl;
           }
@@ -214,7 +223,7 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          this_thread::sleep_for(chrono::milliseconds(0));
+          this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {

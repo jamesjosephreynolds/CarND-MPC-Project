@@ -6,8 +6,18 @@
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-size_t N = 10;
-double dt = 0.1;
+struct MPC_Weights {
+  double w_cte = 10;
+  double w_epsi = 10;
+  double w_v = 2;
+  double w_angle = 1;
+  double w_accel = 1;
+  double w_angle_jerk = 2;
+  double w_accel_jerk = 2;
+  double w_norm = 1 / (w_cte + w_epsi + w_v + w_angle + w_accel + w_angle_jerk + w_accel_jerk);
+} w;
+
+MPC m;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -20,18 +30,18 @@ double dt = 0.1;
 //
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
-const double v_tgt = 25; // set target speed to 35
+const double v_tgt = 55; // set target speed to 35
 
 // Define the starting indices for different variables
 // Variable array - {x, y, psi, v, cte, epsi, angle, accel}
 size_t x_st = 0;
-size_t y_st = x_st + N;
-size_t psi_st = y_st + N;
-size_t v_st = psi_st + N;
-size_t cte_st = v_st + N;
-size_t epsi_st = cte_st + N;
-size_t angle_st = epsi_st + N;
-size_t accel_st = angle_st + N - 1; // use N-1, there is no "initial" angle
+size_t y_st = x_st + m.N;
+size_t psi_st = y_st + m.N;
+size_t v_st = psi_st + m.N;
+size_t cte_st = v_st + m.N;
+size_t epsi_st = cte_st + m.N;
+size_t angle_st = epsi_st + m.N;
+size_t accel_st = angle_st + m.N - 1; // use N-1, there is no "initial" angle
 
 class FG_eval {
  public:
@@ -49,26 +59,29 @@ class FG_eval {
     
     // Cost associated with the desired state and speed
     // Exclude i = 0, as the current state cannot be changed by control updates
-    for (int i = 1; i < N; ++i) {
+    for (int i = 1; i < m.N; ++i) {
       AD<double> cte = vars[cte_st + i];
       AD<double> epsi = vars[epsi_st + i];
       AD<double> v_err = vars[v_st + i] - v_tgt;
-      fg[0] += 0.0*(cte*cte) + 0.0*(epsi*epsi) + 100.0*(v_err*v_err);
+      fg[0] += w.w_cte*(cte*cte) + w.w_epsi*(epsi*epsi) + w.w_v*(v_err*v_err);
     }
     
     // Cost associated with the magnitude of actuators
-    for (int i = 0; i < N - 1; ++i) {
+    for (int i = 0; i < m.N - 1; ++i) {
       AD<double> angle = vars[angle_st + i];
       AD<double> accel = vars[accel_st + i];
-      fg[0] += 0.0*(angle*angle) + 0.0*(accel*accel);
+      fg[0] += w.w_angle*(angle*angle) + w.w_accel*(accel*accel);
     }
     
     // Cost associated with harsh actuations (step change)
-    for (int i = 0; i < N - 2; ++i) {
+    for (int i = 0; i < m.N - 2; ++i) {
       AD<double> angle_dt = vars[angle_st + i + 1] - vars[angle_st + i];
       AD<double> accel_dt = vars[accel_st + i + 1] - vars[accel_st + i];
-      fg[0] += 0.0*(angle_dt*angle_dt) + 0.0*(accel_dt*accel_dt);
+      fg[0] += w.w_angle_jerk*(angle_dt*angle_dt) + w.w_accel_jerk*(accel_dt*accel_dt);
     }
+    
+    // Normalize
+    fg[0] *= w.w_norm;
     
     // Initial constraints are just current state
     fg[x_st + 1] = vars[x_st];
@@ -78,15 +91,15 @@ class FG_eval {
     fg[cte_st + 1] = vars[cte_st];
     fg[epsi_st + 1] = vars[epsi_st];
     
-    std::cout << "state[k] = {" << fg[x_st + 1] << ", ";
+    /*std::cout << "state[k] = {" << fg[x_st + 1] << ", ";
     std::cout << fg[y_st + 1] << ", ";
     std::cout << fg[psi_st + 1] << ", ";
     std::cout << fg[v_st + 1] << ", ";
     std::cout << fg[cte_st + 1] << ", ";
-    std::cout << fg[epsi_st + 1] << "}" << std::endl;
+    std::cout << fg[epsi_st + 1] << "}" << std::endl;*/
     
     // Define local variables for kinematic model equation readability
-    for (int i = 0; i < N - 1; ++i) {
+    for (int i = 0; i < m.N - 1; ++i) {
       AD<double> x0 = vars[x_st + i];
       AD<double> x1 = vars[x_st + i + 1];
       AD<double> y0 = vars[y_st + i];
@@ -107,12 +120,12 @@ class FG_eval {
       AD<double> psi_ref = CppAD::atan(coeffs[1]+2*coeffs[2]*x0);
       
       // Kinematic model update equations rewritten as equality constraints
-      fg[x_st + i + 1 + 1] = x1 - (x0 + v0*CppAD::cos(psi0)*dt); // x(t+dt) = x(t) + v(t)*cos(psi(t))*dt
-      fg[y_st + i + 1 + 1] = y1 - (y0 + v0*CppAD::sin(psi0)*dt); // y(t+dt) = y(t) + v(t)*sin(psi(t))*dt
-      fg[psi_st + i + 1 + 1] = psi1 - (psi0 + v0*angle0*dt/Lf); // psi(t+dt) = psi(t) + v(t)*delta(t)*dt/Lf
-      fg[v_st + i + 1 + 1] = v1 - (v0 + accel0*dt); // v(t+dt) = v(t) + a(t)*dt
-      fg[cte_st + i + 1 + 1] = cte1 - ((f0 - y0) + v0*CppAD::sin(epsi0)*dt); // cte(t+dt) = cte(t) + v(t)*sin(epsi(t))*dt
-      fg[epsi_st + i + 1 + 1] = epsi1 - ((psi0-psi_ref) + v0*angle0*dt/Lf); // epsi(t+dt) = epsi(t) + v(t)*delta(t)*dt
+      fg[x_st + i + 1 + 1] = x1 - (x0 + v0*CppAD::cos(psi0)*m.dt); // x(t+dt) = x(t) + v(t)*cos(psi(t))*dt
+      fg[y_st + i + 1 + 1] = y1 - (y0 + v0*CppAD::sin(psi0)*m.dt); // y(t+dt) = y(t) + v(t)*sin(psi(t))*dt
+      fg[psi_st + i + 1 + 1] = psi1 - (psi0 + v0*angle0*m.dt/Lf); // psi(t+dt) = psi(t) + v(t)*delta(t)*dt/Lf
+      fg[v_st + i + 1 + 1] = v1 - (v0 + accel0*m.dt); // v(t+dt) = v(t) + a(t)*dt
+      fg[cte_st + i + 1 + 1] = cte1 - ((f0 - y0) + v0*CppAD::sin(epsi0)*m.dt); // cte(t+dt) = cte(t) + v(t)*sin(epsi(t))*dt
+      fg[epsi_st + i + 1 + 1] = epsi1 - ((psi0-psi_ref) + v0*angle0*m.dt/Lf); // epsi(t+dt) = epsi(t) + v(t)*delta(t)*dt
     }
   }
 };
@@ -120,8 +133,20 @@ class FG_eval {
 //
 // MPC class definition implementation.
 //
-MPC::MPC() {}
+MPC::MPC() {
+
+  // Model solver parameters
+  N = 10;
+  dt = 0.1;
+}
 MPC::~MPC() {}
+
+void MPC::Init(size_t N_in, double dt_in) {
+  // Model solver parameters
+  
+  N = N_in;
+  dt = dt_in;
+}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   bool ok = true;
@@ -175,8 +200,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   
   // Limit actuator values
   for (int i = angle_st; i < accel_st; ++i) {
-    vars_lowerbound[i] = -0.1;
-    vars_upperbound[i] = 0.1;
+    vars_lowerbound[i] = -0.5;
+    vars_upperbound[i] = 0.5;
   }
   
   for (int i = accel_st; i < n_vars; ++i) {
@@ -249,13 +274,23 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
   // creates a 2 element double vector.
   vector<double> output;
-  for (int i = 0; i < n_vars; ++i) {
-    std::cout << vars[i] << ", ";;
-  }
-  std::cout << std::endl;
   
+  
+  /*for (int i = 0; i < n_vars; ++i) {
+    std::cout << solution.x[i] << ", ";;
+  }
+  std::cout << std::endl;*/
+  /*
   for (int i = 0; i < n_vars; ++i) {
     output.push_back(vars[i]);
+  }*/
+  
+  output.push_back(solution.x[angle_st]);
+  output.push_back(solution.x[accel_st]);
+  
+  for (int i = 0; i < N; ++i) {
+    output.push_back(solution.x[x_st + i]);
+    output.push_back(solution.x[y_st + i]);
   }
   
   return output;
