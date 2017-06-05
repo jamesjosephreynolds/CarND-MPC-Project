@@ -108,7 +108,7 @@ class FG_eval {
       AD<double> accel0 = vars[accel_st + i];
       
       AD<double> f0 = coeffs[0] + coeffs[1]*x0 + coeffs[2]*x0*x0;// + coeffs[3]*x0*x0*x0;
-      AD<double> psi_ref = CppAD::atan(coeffs[1]+2*coeffs[2]*x0);
+      AD<double> psi_ref = CppAD::atan(coeffs[1]);//+2*coeffs[2]*x0);
       
       // Kinematic model update equations rewritten as equality constraints
       fg[x_st + i + 1 + 1] = x1 - (x0 + v0*CppAD::cos(psi0)*m.dt); // x(t+dt) = x(t) + v(t)*cos(psi(t))*dt
@@ -179,8 +179,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   
   // Limit actuator values
   for (int i = angle_st; i < accel_st; ++i) {
-    vars_lowerbound[i] = -0.4;
-    vars_upperbound[i] = 0.4;
+    vars_lowerbound[i] = -0.436;
+    vars_upperbound[i] = 0.436;
   }
   
   for (int i = accel_st; i < n_vars; ++i) {

@@ -94,6 +94,8 @@ int main() {
           double v = j[1]["speed"];
           double steer_angle = j[1]["steering_angle"];
           
+          std::cout << "steering angle: " << steer_angle << std::endl;
+          
           double dt = 0.1; // actuator latency
           size_t N = mpc.N;
 
@@ -139,7 +141,7 @@ int main() {
           // or tan-1((df/dx)(0))
           //
           // a + bx + cx^2 + dx^3 -> b , when taking the derivative evaluated at x=0
-          double epsi = atan(coeffs[1]);//+2*coeffs[2]*px+3*coeffs[3]*px*px); // (rise, run)
+          double epsi = atan(coeffs[1]+2*coeffs[2]*px);//+3*coeffs[3]*px*px); // (rise, run)
           
           psi = -v*steer_angle*dt/2.67;
                    
@@ -178,12 +180,10 @@ int main() {
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
           
-          /*for (int i = 0; i < N; ++i ) {
+          for (int i = 0; i < N; ++i ) {
             mpc_x_vals.push_back(output[2*i + 2]);
             mpc_y_vals.push_back(output[2*i + 3]);
-            std::cout << "x[" << i << "] = " << output[2*i + 2] << std::endl;
-            std::cout << "y[" << i << "] = " << output[2*i + 3] << std::endl;
-          }*/
+          }
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -199,13 +199,10 @@ int main() {
           /*
            * Visualize waypoints based on vehicle speed
            */
-          //int N_pts = 8;
-          /*for (int i = 0; i < N_way; ++i ) {
-            //double x_eval = double(i+1)*v_min;
-            //double y_eval = polyeval(coeffs, x_eval);
+          for (int i = 0; i < N_way; ++i ) {
             next_x_vals.push_back(X_w_raw[i]);
             next_y_vals.push_back(Y_w_raw[i]);
-          }*/
+          }
           
           
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system

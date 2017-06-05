@@ -14,12 +14,12 @@ class MPC {
   const double dt = 0.10;
   struct MPC_Weights {
     const double w_cte = 100;
-    const double w_epsi = 50;
-    const double w_v = 1;
-    const double w_angle = 5;
+    const double w_epsi = 100;
+    const double w_v = 0.1;
+    const double w_angle = 100;
     const double w_accel = 1;
-    const double w_angle_jerk = 10;
-    const double w_accel_jerk = 2;
+    const double w_angle_jerk = 50000;
+    const double w_accel_jerk = 10000;
     const double w_norm = 1 / (w_cte + w_epsi + w_v + w_angle + w_accel + w_angle_jerk + w_accel_jerk);
   } w;
     
