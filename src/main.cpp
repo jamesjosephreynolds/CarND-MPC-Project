@@ -92,10 +92,10 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
-
-          size_t N = 15;
-          double dt = 0.05;
-          mpc.Init(N, dt);
+          double steer_angle = j[1]["steering_angle"];
+          
+          double dt = 0.1; // actuator latency
+          size_t N = mpc.N;
 
           /*
            * Convert waypoints from map coordinate system
@@ -126,25 +126,28 @@ int main() {
            * Solve MPC
            */
           
-          Eigen::VectorXd coeffs = polyfit(X_w_raw, Y_w_raw, int(3));
+          Eigen::VectorXd coeffs = polyfit(X_w_raw, Y_w_raw, int(2));
+          
+          // Put latency into initial state values
+          px = v*dt;
           
           // cross track error is distance in y, from the vehicle coordinate systems's perspective
-          double cte = polyeval(coeffs, 0.0);
+          double cte = polyeval(coeffs, px);
           
           // epsi is the difference between desired heading and actual
           // this is equivalent to the angle of the tangent line of the polynomial at x = 0
           // or tan-1((df/dx)(0))
           //
           // a + bx + cx^2 + dx^3 -> b , when taking the derivative evaluated at x=0
-          double epsi = atan(coeffs[1]); // (rise, run)
+          double epsi = atan(coeffs[1]);//+2*coeffs[2]*px+3*coeffs[3]*px*px); // (rise, run)
+          
+          psi = -v*steer_angle*dt/2.67;
                    
           // Initialize state vector
           Eigen::VectorXd state(6); // {x, y, psi, v, cte, epsi}
           // x0 = 0.0 and y0 = 0.0 because we are in the vehicle coordinate system
           
-          px = v*dt;
-          
-          state << px, 0.0, 0.0, v, cte, epsi;
+          state << px, 0.0, psi, v, cte, epsi;
           //state << 0.0, 0.0, 0.0, v, cte, epsi;
           vector<double> output = mpc.Solve(state, coeffs); // {angle, acceleration}
           
@@ -175,12 +178,12 @@ int main() {
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
           
-          for (int i = 0; i < N; ++i ) {
+          /*for (int i = 0; i < N; ++i ) {
             mpc_x_vals.push_back(output[2*i + 2]);
             mpc_y_vals.push_back(output[2*i + 3]);
-            //std::cout << "x[" << i << "] = " << output[i] << std::endl;
-            //std::cout << "y[" << i << "] = " << output[10 + i] << std::endl;
-          }
+            std::cout << "x[" << i << "] = " << output[2*i + 2] << std::endl;
+            std::cout << "y[" << i << "] = " << output[2*i + 3] << std::endl;
+          }*/
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -197,12 +200,12 @@ int main() {
            * Visualize waypoints based on vehicle speed
            */
           //int N_pts = 8;
-          for (int i = 0; i < N_way; ++i ) {
+          /*for (int i = 0; i < N_way; ++i ) {
             //double x_eval = double(i+1)*v_min;
             //double y_eval = polyeval(coeffs, x_eval);
             next_x_vals.push_back(X_w_raw[i]);
             next_y_vals.push_back(Y_w_raw[i]);
-          }
+          }*/
           
           
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system

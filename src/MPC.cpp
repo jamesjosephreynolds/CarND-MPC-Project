@@ -6,16 +6,7 @@
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-struct MPC_Weights {
-  double w_cte = 10;
-  double w_epsi = 10;
-  double w_v = 2;
-  double w_angle = 1;
-  double w_accel = 1;
-  double w_angle_jerk = 2;
-  double w_accel_jerk = 2;
-  double w_norm = 1 / (w_cte + w_epsi + w_v + w_angle + w_accel + w_angle_jerk + w_accel_jerk);
-} w;
+
 
 MPC m;
 
@@ -30,7 +21,7 @@ MPC m;
 //
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
-const double v_tgt = 55; // set target speed to 35
+const double v_tgt = 99; // set target speed to 35
 
 // Define the starting indices for different variables
 // Variable array - {x, y, psi, v, cte, epsi, angle, accel}
@@ -63,25 +54,25 @@ class FG_eval {
       AD<double> cte = vars[cte_st + i];
       AD<double> epsi = vars[epsi_st + i];
       AD<double> v_err = vars[v_st + i] - v_tgt;
-      fg[0] += w.w_cte*(cte*cte) + w.w_epsi*(epsi*epsi) + w.w_v*(v_err*v_err);
+      fg[0] += m.w.w_cte*(cte*cte) + m.w.w_epsi*(epsi*epsi) + m.w.w_v*(v_err*v_err);
     }
     
     // Cost associated with the magnitude of actuators
     for (int i = 0; i < m.N - 1; ++i) {
       AD<double> angle = vars[angle_st + i];
       AD<double> accel = vars[accel_st + i];
-      fg[0] += w.w_angle*(angle*angle) + w.w_accel*(accel*accel);
+      fg[0] += m.w.w_angle*(angle*angle) + m.w.w_accel*(accel*accel);
     }
     
     // Cost associated with harsh actuations (step change)
     for (int i = 0; i < m.N - 2; ++i) {
       AD<double> angle_dt = vars[angle_st + i + 1] - vars[angle_st + i];
       AD<double> accel_dt = vars[accel_st + i + 1] - vars[accel_st + i];
-      fg[0] += w.w_angle_jerk*(angle_dt*angle_dt) + w.w_accel_jerk*(accel_dt*accel_dt);
+      fg[0] += m.w.w_angle_jerk*(angle_dt*angle_dt) + m.w.w_accel_jerk*(accel_dt*accel_dt);
     }
     
     // Normalize
-    fg[0] *= w.w_norm;
+    fg[0] *= m.w.w_norm;
     
     // Initial constraints are just current state
     fg[x_st + 1] = vars[x_st];
@@ -133,20 +124,8 @@ class FG_eval {
 //
 // MPC class definition implementation.
 //
-MPC::MPC() {
-
-  // Model solver parameters
-  N = 10;
-  dt = 0.1;
-}
+MPC::MPC() {}
 MPC::~MPC() {}
-
-void MPC::Init(size_t N_in, double dt_in) {
-  // Model solver parameters
-  
-  N = N_in;
-  dt = dt_in;
-}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   bool ok = true;
@@ -200,8 +179,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   
   // Limit actuator values
   for (int i = angle_st; i < accel_st; ++i) {
-    vars_lowerbound[i] = -0.5;
-    vars_upperbound[i] = 0.5;
+    vars_lowerbound[i] = -0.4;
+    vars_upperbound[i] = 0.4;
   }
   
   for (int i = accel_st; i < n_vars; ++i) {
