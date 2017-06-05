@@ -5,23 +5,14 @@
 
 using CppAD::AD;
 
-// TODO: Set the timestep length and duration
-
-
+// Dummy instance of MPC to get N and dt values
 MPC m;
 
-// This value assumes the model presented in the classroom is used.
-//
-// It was obtained by measuring the radius formed by running the vehicle in the
-// simulator around in a circle with a constant steering angle and velocity on a
-// flat terrain.
-//
-// Lf was tuned until the the radius formed by the simulating the model
-// presented in the classroom matched the previous radius.
-//
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
-const double v_tgt = 99; // set target speed to 35
+
+// Target speed
+const double v_tgt = 99;
 
 // Define the starting indices for different variables
 // Variable array - {x, y, psi, v, cte, epsi, angle, accel}
@@ -42,36 +33,47 @@ class FG_eval {
 
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   void operator()(ADvector& fg, const ADvector& vars) {
-    // TODO: implement MPC
-    // fg a vector of constraints and cost, vars is a vector of variables.
-    
-    // Initialize cost
+   
+    // Initialize total cost to 0.0 (fg[0])
     fg[0] = 0.0;
     
     // Cost associated with the desired state and speed
     // Exclude i = 0, as the current state cannot be changed by control updates
     for (int i = 1; i < m.N; ++i) {
+      // Error terms
       AD<double> cte = vars[cte_st + i];
       AD<double> epsi = vars[epsi_st + i];
       AD<double> v_err = vars[v_st + i] - v_tgt;
-      fg[0] += m.w.w_cte*(cte*cte) + m.w.w_epsi*(epsi*epsi) + m.w.w_v*(v_err*v_err);
+     
+      // Cost for each error, with unique weighting factors
+      fg[0] += m.w.w_cte*(cte*cte);
+      fg[0] += m.w.w_epsi*(epsi*epsi);
+      fg[0] += m.w.w_v*(v_err*v_err);
     }
     
     // Cost associated with the magnitude of actuators
     for (int i = 0; i < m.N - 1; ++i) {
+      // Actuator positions
       AD<double> angle = vars[angle_st + i];
       AD<double> accel = vars[accel_st + i];
-      fg[0] += m.w.w_angle*(angle*angle) + m.w.w_accel*(accel*accel);
+     
+      // Cost for each actuator position, with unique weighting factors
+      fg[0] += m.w.w_angle*(angle*angle);
+      fg[0] += m.w.w_accel*(accel*accel);
     }
     
     // Cost associated with harsh actuations (step change)
     for (int i = 0; i < m.N - 2; ++i) {
+      // Actuator "jerk" from step to step
       AD<double> angle_dt = vars[angle_st + i + 1] - vars[angle_st + i];
       AD<double> accel_dt = vars[accel_st + i + 1] - vars[accel_st + i];
-      fg[0] += m.w.w_angle_jerk*(angle_dt*angle_dt) + m.w.w_accel_jerk*(accel_dt*accel_dt);
+     
+      // Cost for each actuator "jerk", with unique weighting factors
+      fg[0] += m.w.w_angle_jerk*(angle_dt*angle_dt);
+      fg[0] += m.w.w_accel_jerk*(accel_dt*accel_dt);
     }
     
-    // Normalize
+    // Normalize weight for readability
     fg[0] *= m.w.w_norm;
     
     // Initial constraints are just current state
@@ -80,35 +82,43 @@ class FG_eval {
     fg[psi_st + 1] = vars[psi_st];
     fg[v_st + 1] = vars[v_st];
     fg[cte_st + 1] = vars[cte_st];
-    fg[epsi_st + 1] = vars[epsi_st];
-    
-    /*std::cout << "state[k] = {" << fg[x_st + 1] << ", ";
-    std::cout << fg[y_st + 1] << ", ";
-    std::cout << fg[psi_st + 1] << ", ";
-    std::cout << fg[v_st + 1] << ", ";
-    std::cout << fg[cte_st + 1] << ", ";
-    std::cout << fg[epsi_st + 1] << "}" << std::endl;*/
-    
+    fg[epsi_st + 1] = vars[epsi_st];   
+
     // Define local variables for kinematic model equation readability
     for (int i = 0; i < m.N - 1; ++i) {
+      // Current and future x
       AD<double> x0 = vars[x_st + i];
       AD<double> x1 = vars[x_st + i + 1];
+      
+      // Current and future y
       AD<double> y0 = vars[y_st + i];
       AD<double> y1 = vars[y_st + i + 1];
+      
+      // Current and future heading angle
       AD<double> psi0 = vars[psi_st + i];
       AD<double> psi1 = vars[psi_st + i + 1];
+     
+      // Current and future velocity
       AD<double> v0 = vars[v_st + i];
       AD<double> v1 = vars[v_st + i + 1];
+     
+      // Current and future cross-track error
       AD<double> cte0 = vars[cte_st + i];
       AD<double> cte1 = vars[cte_st + i + 1];
+     
+      // Current and future heading angle error
       AD<double> epsi0 = vars[epsi_st + i];
       AD<double> epsi1 = vars[epsi_st + i + 1];
       
+      // Current steering angle and throttle position
       AD<double> angle0 = vars[angle_st + i];
       AD<double> accel0 = vars[accel_st + i];
       
-      AD<double> f0 = coeffs[0] + coeffs[1]*x0 + coeffs[2]*x0*x0;// + coeffs[3]*x0*x0*x0;
-      AD<double> psi_ref = CppAD::atan(coeffs[1]);//+2*coeffs[2]*x0);
+      // Target y-position change
+      AD<double> f0 = coeffs[0] + coeffs[1]*x0 + coeffs[2]*x0*x0;
+     
+      // Target heading direction
+      AD<double> psi_ref = CppAD::atan(coeffs[1]);
       
       // Kinematic model update equations rewritten as equality constraints
       fg[x_st + i + 1 + 1] = x1 - (x0 + v0*CppAD::cos(psi0)*m.dt); // x(t+dt) = x(t) + v(t)*cos(psi(t))*dt
@@ -129,9 +139,9 @@ MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   bool ok = true;
-  //size_t i;
   typedef CPPAD_TESTVECTOR(double) Dvector;
-
+  
+  // Use individual variables for readability
   double x, y, psi, v, cte, epsi;
   x = state[0];
   y = state[1];
@@ -139,28 +149,23 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   v = state[3];
   cte = state[4];
   epsi = state[5];
-  
-  // Set the number of model variables (includes both states and inputs).
-  // For example: If the state is a 4 element vector, the actuators is a 2
-  // element vector and there are 10 timesteps. The number of variables is:
-  //
-  // 4 * 10 + 2 * 9
-  
+   
   int n_st = 6; // number of states: {x, y, psi, v, cte, eps}
   int n_ac = 2; // number of actuators: {angle, accel}
+ 
+  // num_variables = num_states * num_points + num_actuators * (num_points - 1)
   size_t n_vars = n_st*N + n_ac*(N-1);
-  
-  // Set the number of constraints
-  // state dimension * number of steps
+
+  // num_constraints = num_states * num_points
   size_t n_constraints = n_st*N;
 
-  // Initial value of the independent variables.
-  // First pass set all to 0.0, then set initial values from input array
+  // First pass set all variables to 0.0
   Dvector vars(n_vars);
   for (int i = 0; i < n_vars; i++) {
     vars[i] = 0;
   }
   
+  // Populate current variables from state input
   vars[x_st] = x;
   vars[y_st] = y;
   vars[psi_st] = psi;
@@ -177,12 +182,13 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     vars_upperbound[i] = 1.0e19;
   }
   
-  // Limit actuator values
+  // Limit steering angle to 25 deg = 0.436 rad
   for (int i = angle_st; i < accel_st; ++i) {
     vars_lowerbound[i] = -0.436;
     vars_upperbound[i] = 0.436;
   }
   
+  // Limit acceleration to [-1, +1]
   for (int i = accel_st; i < n_vars; ++i) {
     vars_lowerbound[i] = -1.0;
     vars_upperbound[i] = 1.0;
@@ -252,21 +258,15 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   //
   // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
   // creates a 2 element double vector.
+  
+  // Define a return object
   vector<double> output;
   
-  
-  /*for (int i = 0; i < n_vars; ++i) {
-    std::cout << solution.x[i] << ", ";;
-  }
-  std::cout << std::endl;*/
-  /*
-  for (int i = 0; i < n_vars; ++i) {
-    output.push_back(vars[i]);
-  }*/
-  
+  // First two elements are steering angle and throttle position
   output.push_back(solution.x[angle_st]);
   output.push_back(solution.x[accel_st]);
   
+  // next 2N elements are (x,y) pairs of points (solution trajectory)
   for (int i = 0; i < N; ++i) {
     output.push_back(solution.x[x_st + i]);
     output.push_back(solution.x[y_st + i]);
