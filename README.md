@@ -80,6 +80,8 @@ Most of my actual model tuning was in the weighting factors.  You can see that `
 
 I was able to achieve a very pleasing result, with top speed over 80 MPH, and smooth handling.  The control is stable, and the top speed of 80 MPH is more than 2.5 times higher than I achieved with PID control.
 
+[![Whoops, there should be a picture here!](https://img.youtube.com/vi/1fFbWDCZlmE/0.jpg)](https://youtu.be/1fFbWDCZlmE)
+
 https://youtu.be/1fFbWDCZlmE
 
 ## Reflections
