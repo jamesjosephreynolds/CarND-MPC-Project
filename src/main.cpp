@@ -72,7 +72,7 @@ int main() {
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
     string sdata = string(data).substr(0, length);
-    cout << sdata << endl;
+    //cout << sdata << endl;
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
       string s = hasData(sdata);
       if (s != "") {
@@ -128,6 +128,11 @@ int main() {
           // Steering convention is opposite of returned value, negate
           double steer_value = -output[0];
           double throttle_value = output[1];
+          
+          double steer_disp = double(int(steer_value*100))/100;
+          double throttle_disp = double(int(throttle_value*100))/100;
+          
+          std::cout << "Steer: " << steer_disp << ", Throttle: " << throttle_disp << std::endl;
 
           //Display the MPC predicted trajectory
           vector<double> mpc_x_vals;

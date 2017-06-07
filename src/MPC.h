@@ -21,7 +21,7 @@ class MPC {
   struct MPC_Weights {
     const double w_cte = 100;
     const double w_epsi = 100;
-    const double w_v = 0.1;
+    const double w_v = 0.17;
     const double w_angle = 100;
     const double w_accel = 1;
     const double w_angle_jerk = 50000;
