@@ -254,8 +254,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   ok &= solution.status == CppAD::ipopt::solve_result<Dvector>::success;
 
   // Cost
-  auto cost = solution.obj_value;
-  std::cout << "Cost " << cost << std::endl;
+  //auto cost = solution.obj_value;
+  //std::cout << "Cost " << cost << std::endl;
 
   // TODO: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
@@ -279,8 +279,15 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   restart_sim = false;
   
   // Add up cost if simulator has stabilized
+  // Cost here is not the same as the solution cost
+  // If the same cost were used, then setting all weights to 0.0
+  // would give the optimal solution
   if (vertex_cnt > vertex_cnt_min) {
+    cte = cte > 2.5 ? 2.5 : cte;
+    double cost = cte*cte/(2.5*2.5);
+    cost /= double(vertex_cnt_max - vertex_cnt_min);
     vertex_tot_cost[vertex_idx] += cost;
+    std::cout << "Cost " << cost << std::endl;
   }
   ++vertex_cnt;
   

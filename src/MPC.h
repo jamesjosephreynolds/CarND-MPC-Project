@@ -34,8 +34,8 @@ class MPC {
   
   int vertex_idx = 0;
   int vertex_cnt = 0;
-  const int vertex_cnt_max = 800;
-  const int vertex_cnt_min = 300;
+  const int vertex_cnt_max = 400;
+  const int vertex_cnt_min = 100;
   
   bool restart_sim = false;
     
