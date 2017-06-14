@@ -134,7 +134,11 @@ class FG_eval {
 //
 // MPC class definition implementation.
 //
-MPC::MPC() {}
+MPC::MPC() {
+  for (int i = 0; i < vertex_idx_max; ++i) {
+    vertex_tot_cost.push_back(0.0);
+  }
+}
 MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
@@ -271,6 +275,30 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     output.push_back(solution.x[x_st + i]);
     output.push_back(solution.x[y_st + i]);
   }
+  
+  restart_sim = false;
+  
+  // Add up cost if simulator has stabilized
+  if (vertex_cnt > vertex_cnt_min) {
+    vertex_tot_cost[vertex_idx] += cost;
+  }
+  ++vertex_cnt;
+  
+  // Go on to next point if enough costs accumulated
+  if (vertex_cnt >= vertex_cnt_max) {
+    vertex_idx = vertex_idx >= (vertex_idx_max-1) ? 0 : (vertex_idx + 1) ;
+    vertex_cnt = 0;
+    restart_sim = true;
+  }
+  
+  std::cout << "Count: " << vertex_cnt << std::endl;
+  std::cout << "Total cost: ";
+  for (int i = 0; i < vertex_idx_max; ++i) {
+    std::cout << vertex_tot_cost[i] << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "Index: " << vertex_idx << std::endl;
+  
   
   return output;
 }

@@ -28,6 +28,16 @@ class MPC {
     const double w_accel_jerk = 0.5;// limit to 0.5 (jerk max = 2.0 m/s/s);
     const double w_norm = 1 / (w_cte + w_epsi + w_v + w_angle + w_accel + w_angle_jerk + w_accel_jerk);
   } w;
+  
+  const int vertex_idx_max = 8;
+  vector<double> vertex_tot_cost;
+  
+  int vertex_idx = 0;
+  int vertex_cnt = 0;
+  const int vertex_cnt_max = 800;
+  const int vertex_cnt_min = 300;
+  
+  bool restart_sim = false;
     
   MPC();
 
