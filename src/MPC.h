@@ -14,18 +14,18 @@ class MPC {
   MPC project hyperparameters
   */
  // Number of future points to model, and time step
-  const size_t N = 8;
-  const double dt = 0.10;
+  const size_t N = 12;
+  const double dt = 0.15;
  
  // Weight factors for cost optimization
   struct MPC_Weights {
-    const double w_cte = 100;
-    const double w_epsi = 100;
-    const double w_v = 0.17;
-    const double w_angle = 100;
-    const double w_accel = 1;
-    const double w_angle_jerk = 50000;
-    const double w_accel_jerk = 10000;
+    const double w_cte = 0.1;          // limit to 0.5 (cte max = 2 meter)
+    const double w_epsi = 0.3;      // limit to 0.636 (epsi max = 1.57 rad (pi/2))
+    const double w_v = 0.01;        // limit to 0.0179 (v err max = 56 m/s)
+    const double w_angle = 1.0;     // limit to 2.29 (angle max = 0.436 rad)
+    const double w_accel = 0.25;     // limit to 1.0 (accel max = 1.0 m/s/s)
+    const double w_angle_jerk = 1.146;// limit to 1.146 (jerk max = 0.872 rad)
+    const double w_accel_jerk = 0.5;// limit to 0.5 (jerk max = 2.0 m/s/s);
     const double w_norm = 1 / (w_cte + w_epsi + w_v + w_angle + w_accel + w_angle_jerk + w_accel_jerk);
   } w;
     

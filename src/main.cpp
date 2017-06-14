@@ -88,6 +88,9 @@ int main() {
           double v = j[1]["speed"];
           double steer_angle = j[1]["steering_angle"];
           
+          //std::cout << steer_angle << " ";
+          //std::cout << psi << std::endl;
+          
           double dt = 0.1; // actuator latency
           size_t N = mpc.N;
 
@@ -105,10 +108,11 @@ int main() {
             Y_w_raw[i] = (ptsy[i] - py)*cos(psi) - (ptsx[i] - px)*sin(psi);
           }
           
-          // Fit a polynomial to upcoming waypoints          
-          Eigen::VectorXd coeffs = polyfit(X_w_raw, Y_w_raw, int(2));
+          // Fit a polynomial to upcoming waypoints
+          Eigen::VectorXd coeffs = polyfit(X_w_raw, Y_w_raw, int(3));
           
           // Put latency into initial state values
+          v *= 0.447; // mph -> m/s
           px = v*dt;
           psi = -v*steer_angle*dt/2.67;
           
@@ -116,7 +120,7 @@ int main() {
           double cte = polyeval(coeffs, px);
           
           // epsi is the difference between desired heading and actual
-          double epsi = atan(coeffs[1]+2*coeffs[2]*px);
+          double epsi = atan(coeffs[1]+2*coeffs[2]*px+2*coeffs[3]*px*px);
                    
           // Initialize state vector
           Eigen::VectorXd state(6); // {x, y, psi, v, cte, epsi}
@@ -137,7 +141,7 @@ int main() {
           //Display the MPC predicted trajectory
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
-          for (int i = 0; i < N; ++i ) {
+          for (int i = 0; i < (N-1); ++i ) {
             mpc_x_vals.push_back(output[2*i + 2]);
             mpc_y_vals.push_back(output[2*i + 3]);
           }

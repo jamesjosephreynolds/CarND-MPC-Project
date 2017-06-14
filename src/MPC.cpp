@@ -12,7 +12,7 @@ MPC m;
 const double Lf = 2.67;
 
 // Target speed
-const double v_tgt = 99;
+const double v_tgt = 99*0.447; // mph -> m/s;
 
 // Define the starting indices for different variables
 // Variable array - {x, y, psi, v, cte, epsi, angle, accel}
@@ -115,10 +115,10 @@ class FG_eval {
       AD<double> accel0 = vars[accel_st + i];
       
       // Target y-position change
-      AD<double> f0 = coeffs[0] + coeffs[1]*x0 + coeffs[2]*x0*x0;
+      AD<double> f0 = coeffs[0] + coeffs[1]*x0 + coeffs[2]*x0*x0 + coeffs[3]*x0*x0*x0;
      
       // Target heading direction
-      AD<double> psi_ref = CppAD::atan(coeffs[1]);
+      AD<double> psi_ref = CppAD::atan(coeffs[1] + 2*coeffs[2]*x0 + 3*coeffs[3]*x0*x0);
       
       // Kinematic model update equations rewritten as equality constraints
       fg[x_st + i + 1 + 1] = x1 - (x0 + v0*CppAD::cos(psi0)*m.dt); // x(t+dt) = x(t) + v(t)*cos(psi(t))*dt
@@ -251,7 +251,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   // Cost
   auto cost = solution.obj_value;
-  //std::cout << "Cost " << cost << std::endl;
+  std::cout << "Cost " << cost << std::endl;
 
   // TODO: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
@@ -267,7 +267,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   output.push_back(solution.x[accel_st]);
   
   // next 2N elements are (x,y) pairs of points (solution trajectory)
-  for (int i = 0; i < N; ++i) {
+  for (int i = 1; i < N; ++i) {
     output.push_back(solution.x[x_st + i]);
     output.push_back(solution.x[y_st + i]);
   }
