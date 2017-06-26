@@ -15,7 +15,7 @@ class MPC {
   */
  // Number of future points to model, and time step
   const size_t N = 12;
-  const double dt = 0.15;
+  const double dt = 0.1;
  
  // Weight factors for cost optimization
   struct MPC_Weights {

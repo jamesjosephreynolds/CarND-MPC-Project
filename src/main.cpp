@@ -113,7 +113,8 @@ int main() {
           
           // Put latency into initial state values
           v *= 0.447; // mph -> m/s
-          px = v*dt;
+          px = v*dt*cos(steer_angle);
+          py = v*dt*sin(steer_angle);
           psi = -v*steer_angle*dt/2.67;
           
           // cross track error is distance in y, from the vehicle coordinate systems's perspective
@@ -124,7 +125,7 @@ int main() {
                    
           // Initialize state vector
           Eigen::VectorXd state(6); // {x, y, psi, v, cte, epsi}
-          state << px, 0.0, psi, v, cte, epsi;
+          state << px, py, psi, v, cte, epsi;
 
           // Solve the MPC
           vector<double> output = mpc.Solve(state, coeffs);
@@ -169,15 +170,19 @@ int main() {
           // SUBMITTING.
           this_thread::sleep_for(chrono::milliseconds(100));
           
+          
           if (!mpc.restart_sim) {
             ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-          } else { // Twiddle is ready to try new parameters
+          }
+          /*
+           else { // Twiddle is ready to try new parameters
+            
             // Restart simulator
             std::cout << "TEST!" << std::endl;
             std::string reset_msg = "42[\"reset\",{}]";
             ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
           }
-          
+          */
           
           
         }
